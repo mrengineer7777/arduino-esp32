@@ -149,13 +149,13 @@ bool HTTPClient::begin(WiFiClient &client, String url) {
     // check for : (http: or https:)
     int index = url.indexOf(':');
     if(index < 0) {
-        log_d("failed to parse protocol");
+        log_e("failed to parse protocol");
         return false;
     }
 
     String protocol = url.substring(0, index);
     if(protocol != "http" && protocol != "https") {
-        log_d("unknown protocol '%s'", protocol.c_str());
+        log_e("unknown protocol '%s'", protocol.c_str());
         return false;
     }
 
@@ -260,7 +260,7 @@ bool HTTPClient::beginInternal(String url, const char* expectedProtocol)
 
     _protocol = url.substring(0, index);
     if (_protocol != expectedProtocol) {
-        log_d("unexpected protocol: %s, expected %s", _protocol.c_str(), expectedProtocol);
+        log_w("unexpected protocol: %s, expected %s", _protocol.c_str(), expectedProtocol);
         return false;
     }
 
@@ -300,7 +300,7 @@ bool HTTPClient::beginInternal(String url, const char* expectedProtocol)
     }
     _host = the_host;
     _uri = url;
-    log_d("protocol: %s, host: %s port: %d url: %s", _protocol.c_str(), _host.c_str(), _port, _uri.c_str());
+    log_v("protocol: %s, host: %s port: %d url: %s", _protocol.c_str(), _host.c_str(), _port, _uri.c_str());
     return true;
 }
 
@@ -318,7 +318,7 @@ bool HTTPClient::begin(String host, uint16_t port, String uri)
     _port = port;
     _uri = uri;
     _transportTraits = TransportTraitsPtr(new TransportTraits());
-    log_d("host: %s port: %d uri: %s", host.c_str(), port, uri.c_str());
+    log_v("host: %s port: %d uri: %s", host.c_str(), port, uri.c_str());
     return true;
 }
 
@@ -340,6 +340,7 @@ bool HTTPClient::begin(String host, uint16_t port, String uri, const char* CAcer
     }
     _secure = true;
     _transportTraits = TransportTraitsPtr(new TLSTraits(CAcert));
+    log_v("host: %s port: %d uri: %s", host.c_str(), port, uri.c_str());
     return true;
 }
 
@@ -390,9 +391,9 @@ void HTTPClient::disconnect(bool preserveClient)
         }
 
         if(_reuse && _canReuse) {
-            log_d("tcp keep open for reuse");
+            log_v("tcp keep open for reuse");
         } else {
-            log_d("tcp stop");
+            log_v("tcp stop");
             _client->stop();
             if(!preserveClient) {
                 _client = nullptr;
@@ -405,7 +406,7 @@ void HTTPClient::disconnect(bool preserveClient)
             }
         }
     } else {
-        log_d("tcp is closed\n");
+        log_v("tcp is closed\n");
     }
 }
 
@@ -595,7 +596,7 @@ int HTTPClient::sendRequest(const char * type, uint8_t * payload, size_t size)
             }
         }
 
-        log_d("request type: '%s' redirCount: %d\n", type, redirectCount);
+        log_v("request type: '%s' redirCount: %d\n", type, redirectCount);
         
         // connect to server
         if(!connect()) {
@@ -625,7 +626,7 @@ int HTTPClient::sendRequest(const char * type, uint8_t * payload, size_t size)
         }
 
         code = handleHeaderResponse();
-        log_d("sendRequest code=%d\n", code);
+        log_v("sendRequest code=%d\n", code);
 
         // Handle redirections as stated in RFC document:
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html
@@ -654,7 +655,7 @@ int HTTPClient::sendRequest(const char * type, uint8_t * payload, size_t size)
                         redirectCount += 1;
                         log_d("following redirect (the same method): '%s' redirCount: %d\n", _location.c_str(), redirectCount);
                         if (!setURL(_location)) {
-                            log_d("failed setting URL for redirection\n");
+                            log_w("failed setting URL for redirection\n");
                             // no redirection
                             break;
                         }
@@ -670,7 +671,7 @@ int HTTPClient::sendRequest(const char * type, uint8_t * payload, size_t size)
                     redirectCount += 1;
                     log_d("following redirect (dropped to GET/HEAD): '%s' redirCount: %d\n", _location.c_str(), redirectCount);
                     if (!setURL(_location)) {
-                        log_d("failed setting URL for redirection\n");
+                        log_w("failed setting URL for redirection\n");
                         // no redirection
                         break;
                     }
@@ -794,7 +795,7 @@ int HTTPClient::sendRequest(const char * type, Stream * stream, size_t size)
 
                     if(bytesWrite != leftBytes) {
                         // failed again
-                        log_d("short write, asked for %d but got %d failed.", leftBytes, bytesWrite);
+                        log_w("short write, asked for %d but got %d failed.", leftBytes, bytesWrite);
                         free(buff);
                         return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
                     }
@@ -802,7 +803,7 @@ int HTTPClient::sendRequest(const char * type, Stream * stream, size_t size)
 
                 // check for write error
                 if(_client->getWriteError()) {
-                    log_d("stream write error %d", _client->getWriteError());
+                    log_w("stream write error %d", _client->getWriteError());
                     free(buff);
                     return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
                 }
@@ -821,15 +822,15 @@ int HTTPClient::sendRequest(const char * type, Stream * stream, size_t size)
         free(buff);
 
         if(size && (int) size != bytesWritten) {
-            log_d("Stream payload bytesWritten %d and size %d mismatch!.", bytesWritten, size);
-            log_d("ERROR SEND PAYLOAD FAILED!");
+            log_w("Stream payload bytesWritten %d and size %d mismatch!.", bytesWritten, size);
+            log_w("ERROR SEND PAYLOAD FAILED!");
             return returnError(HTTPC_ERROR_SEND_PAYLOAD_FAILED);
         } else {
-            log_d("Stream payload written: %d", bytesWritten);
+            log_v("Stream payload written: %d", bytesWritten);
         }
 
     } else {
-        log_d("too less ram! need %d", HTTP_TCP_BUFFER_SIZE);
+        log_e("out of memory! need %d", HTTP_TCP_BUFFER_SIZE);
         return returnError(HTTPC_ERROR_TOO_LESS_RAM);
     }
 
@@ -856,7 +857,7 @@ WiFiClient& HTTPClient::getStream(void)
         return *_client;
     }
 
-    log_w("getStream: not connected");
+    log_i("getStream: not connected");
     static WiFiClient empty;
     return empty;
 }
@@ -871,7 +872,7 @@ WiFiClient* HTTPClient::getStreamPtr(void)
         return _client;
     }
 
-    log_w("getStreamPtr: not connected");
+    log_i("getStreamPtr: not connected");
     return nullptr;
 }
 
@@ -919,7 +920,7 @@ int HTTPClient::writeToStream(Stream * stream)
             // read size of chunk
             len = (uint32_t) strtol((const char *) chunkHeader.c_str(), NULL, 16);
             size += len;
-            log_d(" read chunk len: %d", len);
+            log_v(" read chunk len: %d", len);
 
             // data left?
             if(len > 0) {
@@ -975,7 +976,7 @@ String HTTPClient::getString(void)
             writeToStream(&sstring);
             return sstring;            
         } else {
-            log_d("not enough memory to reserve a string! need: %d", (_size + 1));
+            log_w("not enough memory to reserve a string! need: %d", (_size + 1));
         }
     }
 
@@ -1113,9 +1114,9 @@ bool HTTPClient::connect(void)
 {
     if(connected()) {
         if(_reuse) {
-            log_d("already connected, reusing connection");
+            log_v("already connected, reusing connection");
         } else {
-            log_d("already connected, try reuse!");
+            log_i("already connected, try reuse!");
         }
         while(_client->available() > 0) {
             _client->read();
@@ -1135,25 +1136,25 @@ bool HTTPClient::connect(void)
 #endif
 
     if (!_client) {
-        log_d("HTTPClient::begin was not called or returned error");
+        log_w("HTTPClient::begin was not called or returned error");
         return false;
     }
 #ifdef HTTPCLIENT_1_1_COMPATIBLE
     if (_tcpDeprecated && !_transportTraits->verify(*_client, _host.c_str())) {
-        log_d("transport level verify failed");
+        log_w("transport level verify failed");
         _client->stop();
         return false;
     }	
 #endif
     if(!_client->connect(_host.c_str(), _port, _connectTimeout)) {
-        log_d("failed connect to %s:%u", _host.c_str(), _port);
+        log_i("failed connect to %s:%u", _host.c_str(), _port);
         return false;
     }
 
     // set Timeout for WiFiClient and for Stream::readBytesUntil() and Stream::readStringUntil()
     _client->setTimeout((_tcpTimeout + 500) / 1000);	
 
-    log_d(" connected to %s:%u", _host.c_str(), _port);
+    log_v(" connected to %s:%u", _host.c_str(), _port);
 
 
 /*
@@ -1304,14 +1305,14 @@ int HTTPClient::handleHeaderResponse()
             }
 
             if(headerLine == "") {
-                log_d("code: %d", _returnCode);
+                log_v("code: %d", _returnCode);
 
                 if(_size > 0) {
-                    log_d("size: %d", _size);
+                    log_v("size: %d", _size);
                 }
 
                 if(transferEncoding.length() > 0) {
-                    log_d("Transfer-Encoding: %s", transferEncoding.c_str());
+                    log_v("Transfer-Encoding: %s", transferEncoding.c_str());
                     if(transferEncoding.equalsIgnoreCase("chunked")) {
                         _transferEncoding = HTTPC_TE_CHUNKED;
                     } else if(transferEncoding.equalsIgnoreCase("identity")) {
@@ -1326,7 +1327,7 @@ int HTTPClient::handleHeaderResponse()
                 if(_returnCode) {
                     return _returnCode;
                 } else {
-                    log_d("Remote host is not an HTTP Server!");
+                    log_w("Remote host is not an HTTP Server!");
                     return HTTPC_ERROR_NO_HTTP_SERVER;
                 }
             }
@@ -1443,15 +1444,15 @@ int HTTPClient::writeToStreamDataBlock(Stream * stream, int size)
 
         free(buff);
 
-        log_d("connection closed or file end (written: %d).", bytesWritten);
+        log_v("connection closed or file end (written: %d).", bytesWritten);
 
         if((size > 0) && (size != bytesWritten)) {
-            log_d("bytesWritten %d and size %d mismatch!.", bytesWritten, size);
+            log_w("bytesWritten %d and size %d mismatch!.", bytesWritten, size);
             return HTTPC_ERROR_STREAM_WRITE;
         }
 
     } else {
-        log_w("too less ram! need %d", HTTP_TCP_BUFFER_SIZE);
+        log_w("out of memory! need %d", HTTP_TCP_BUFFER_SIZE);
         return HTTPC_ERROR_TOO_LESS_RAM;
     }
 
@@ -1499,7 +1500,7 @@ bool HTTPClient::setURL(const String& url)
     }
 
     if (!url.startsWith(_protocol + ':')) {
-        log_d("new URL not the same protocol, expected '%s', URL: '%s'\n", _protocol.c_str(), url.c_str());
+        log_w("new URL not the same protocol, expected '%s', URL: '%s'\n", _protocol.c_str(), url.c_str());
         return false;
     }
 
