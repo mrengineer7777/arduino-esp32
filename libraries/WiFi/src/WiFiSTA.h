@@ -53,6 +53,7 @@ public:
 
     bool reconnect();
     bool disconnect(bool wifioff = false, bool eraseap = false);
+    bool eraseAP(void);
 
     bool isConnected();
 
@@ -84,6 +85,7 @@ public:
     uint8_t subnetCIDR();
     
     bool enableIpV6();
+    bool IPv6(bool state);
     IPv6Address localIPv6();
 
     // STA WiFi info
@@ -97,7 +99,7 @@ public:
     int8_t RSSI();
 
     static void _setStatus(wl_status_t status);
-    
+
 protected:
     static bool _useStaticIp;
     static bool _autoReconnect;

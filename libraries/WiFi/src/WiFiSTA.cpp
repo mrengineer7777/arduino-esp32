@@ -222,7 +222,6 @@ wl_status_t WiFiSTAClass::begin(const char* wpa2_ssid, wpa2_auth_method_t method
  */
 wl_status_t WiFiSTAClass::begin(const char* ssid, const char *passphrase, int32_t channel, const uint8_t* bssid, bool connect)
 {
-
     if(!WiFi.enableSTA(true)) {
         log_e("STA enable failed!");
         return WL_CONNECT_FAILED;
@@ -237,7 +236,7 @@ wl_status_t WiFiSTAClass::begin(const char* ssid, const char *passphrase, int32_
         log_e("passphrase too long!");
         return WL_CONNECT_FAILED;
     }
-
+    
     wifi_config_t conf;
     memset(&conf, 0, sizeof(wifi_config_t));
 
@@ -269,6 +268,7 @@ wl_status_t WiFiSTAClass::begin(const char* ssid, const char *passphrase, int32_
 
     if(!_useStaticIp){
     	if(set_esp_interface_ip(ESP_IF_WIFI_STA) != ESP_OK) {
+            log_e("set static IP failed!");
             return WL_CONNECT_FAILED;
         }
     }
@@ -358,12 +358,28 @@ bool WiFiSTAClass::disconnect(bool wifioff, bool eraseap)
             return false;
         }
         if(wifioff) {
-             return WiFi.enableSTA(false);
+            return WiFi.enableSTA(false);
         }
         return true;
     }
 
     return false;
+}
+
+/**
+ * @brief  Reset WiFi settings in NVS to default values.
+ * @return true if erase succeeded
+ * @note: Resets SSID, password, protocol, mode, etc.
+ * These settings are maintained by WiFi driver in IDF.
+ * WiFi driver must be initialized.
+ */
+bool WiFiSTAClass::eraseAP(void) {
+    if(WiFi.getMode()==WIFI_MODE_NULL) {
+        if(!WiFi.enableSTA(true))
+            return false;
+    }
+
+    return esp_wifi_restore()==ESP_OK;
 }
 
 /**
@@ -730,6 +746,19 @@ bool WiFiSTAClass::enableIpV6()
         return false;
     }
     return esp_netif_create_ip6_linklocal(get_esp_interface_netif(ESP_IF_WIFI_STA)) == ESP_OK;
+}
+
+/**
+ * Enable IPv6 support on the station interface.
+ * @return true on success
+ */
+bool WiFiSTAClass::IPv6(bool state)
+{
+   if (state)
+       WiFiGenericClass::setStatusBits(WIFI_WANT_IP6_BIT);
+   else
+       WiFiGenericClass::clearStatusBits(WIFI_WANT_IP6_BIT);
+   return true;
 }
 
 /**
