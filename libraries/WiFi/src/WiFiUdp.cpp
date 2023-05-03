@@ -44,7 +44,7 @@ uint8_t WiFiUDP::begin(IPAddress address, uint16_t port){
 
   server_port = port;
 
-  tx_buffer = new char[1460];
+  tx_buffer = (char *)malloc(1460);
   if(!tx_buffer){
     log_e("could not create tx buffer: %d", errno);
     return 0;
@@ -146,7 +146,7 @@ uint8_t WiFiUDP::beginMulticast(IPAddress a, uint16_t p){
 
 void WiFiUDP::stop(){
   if(tx_buffer){
-    delete[] tx_buffer;
+    free(tx_buffer);
     tx_buffer = NULL;
   }
   tx_buffer_len = 0;
@@ -200,7 +200,7 @@ int WiFiUDP::beginPacket(){
 
   // allocate tx_buffer if is necessary
   if(!tx_buffer){
-    tx_buffer = new char[1460];
+    tx_buffer = (char *)malloc(1460);
     if(!tx_buffer){
       log_e("could not create tx buffer: %d", errno);
       return 0;
@@ -289,7 +289,7 @@ int WiFiUDP::parsePacket(){
   socklen_t slen = sizeof(sockaddr_storage);
   int len;
   char *buf = (char *)malloc(1460);
-  if(!buf){
+  if(!buf) {
     return 0;
   }
   if ((len = recvfrom(udp_server, buf, 1460, MSG_DONTWAIT, (struct sockaddr *) &si_other_storage, (socklen_t *)&slen)) == -1){

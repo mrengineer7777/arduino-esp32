@@ -236,7 +236,7 @@ wl_status_t WiFiSTAClass::begin(const char* ssid, const char *passphrase, int32_
         log_e("passphrase too long!");
         return WL_CONNECT_FAILED;
     }
-    
+
     wifi_config_t conf;
     memset(&conf, 0, sizeof(wifi_config_t));
 
